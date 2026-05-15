@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Palette,
   Sparkles,
@@ -11,6 +11,8 @@ import {
   Sun,
   Droplets,
   Wind,
+  CheckCircle,
+  AlertTriangle,
 } from 'lucide-react'
 
 interface ThemeSettings {
@@ -35,15 +37,91 @@ const defaultSettings: ThemeSettings = {
   noiseOverlay: true,
 }
 
+function profileToSettings(data: any): ThemeSettings {
+  return {
+    primaryColor: data?.theme?.primaryColor ?? defaultSettings.primaryColor,
+    accentColor: data?.theme?.accentColor ?? defaultSettings.accentColor,
+    glowIntensity: data?.theme?.glowIntensity ?? defaultSettings.glowIntensity,
+    blurIntensity: data?.theme?.blurIntensity ?? defaultSettings.blurIntensity,
+    particleCount: data?.theme?.particleCount ?? defaultSettings.particleCount,
+    particleSpeed: data?.theme?.particleSpeed ?? defaultSettings.particleSpeed,
+    floatAnimation: data?.effects?.enableFloatingAnimation ?? defaultSettings.floatAnimation,
+    noiseOverlay: data?.effects?.enableNoiseOverlay ?? defaultSettings.noiseOverlay,
+  }
+}
+
 export default function ThemeEditorPage() {
   const [settings, setSettings] = useState<ThemeSettings>(defaultSettings)
   const [activeTab, setActiveTab] = useState<'colors' | 'effects' | 'particles'>('colors')
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/profile')
+      const json = await res.json()
+      if (json.success && json.data) {
+        setSettings(profileToSettings(json.data))
+      }
+    } catch {
+      showToast('Không thể tải cài đặt giao diện', 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { loadProfile() }, [loadProfile])
 
   const updateSetting = <K extends keyof ThemeSettings>(
     key: K,
     value: ThemeSettings[K]
   ) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          'theme.primaryColor': settings.primaryColor,
+          'theme.accentColor': settings.accentColor,
+          'theme.glowIntensity': settings.glowIntensity,
+          'theme.blurIntensity': settings.blurIntensity,
+          'theme.particleCount': settings.particleCount,
+          'theme.particleSpeed': settings.particleSpeed,
+          'effects.enableFloatingAnimation': settings.floatAnimation,
+          'effects.enableNoiseOverlay': settings.noiseOverlay,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        showToast('Đã lưu giao diện thành công!')
+        setSettings(profileToSettings(data.data))
+      } else {
+        showToast(data.message || 'Lỗi khi lưu', 'error')
+      }
+    } catch {
+      showToast('Lỗi kết nối server', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
   return (
@@ -54,11 +132,11 @@ export default function ThemeEditorPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-glow bg-gradient-to-r from-white via-[#a78bfa] to-[#38bdf8] bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-[#a78bfa] to-[#38bdf8] bg-clip-text text-transparent">
           Theme Editor
         </h1>
         <p className="text-muted-foreground mt-2">
-          Customize the look and feel of your abyss
+          Tùy chỉnh giao diện và hiệu ứng
         </p>
       </motion.div>
 
@@ -73,9 +151,9 @@ export default function ThemeEditorPage() {
           {/* Tabs */}
           <div className="flex gap-2 p-1 glass rounded-xl">
             {[
-              { id: 'colors', label: 'Colors', icon: Palette },
-              { id: 'effects', label: 'Effects', icon: Sparkles },
-              { id: 'particles', label: 'Particles', icon: Wind },
+              { id: 'colors', label: 'Màu sắc', icon: Palette },
+              { id: 'effects', label: 'Hiệu ứng', icon: Sparkles },
+              { id: 'particles', label: 'Hạt lửa', icon: Wind },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -99,12 +177,12 @@ export default function ThemeEditorPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h3 className="text-lg font-semibold text-foreground">Color Palette</h3>
+              <h3 className="text-lg font-semibold text-foreground">Bảng màu</h3>
 
               <div className="grid sm:grid-cols-2 gap-6">
                 {/* Primary Color */}
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">Primary Color</label>
+                  <label className="text-sm font-medium text-foreground">Màu chính</label>
                   <div className="flex items-center gap-4">
                     <input
                       type="color"
@@ -126,7 +204,7 @@ export default function ThemeEditorPage() {
                         onClick={() => updateSetting('primaryColor', color)}
                         className="w-8 h-8 rounded-lg border-2 border-border hover:scale-110 transition-transform"
                         style={{ backgroundColor: color }}
-                        aria-label={`Set primary color to ${color}`}
+                        aria-label={`Đặt màu chính thành ${color}`}
                       />
                     ))}
                   </div>
@@ -134,7 +212,7 @@ export default function ThemeEditorPage() {
 
                 {/* Accent Color */}
                 <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">Accent Color</label>
+                  <label className="text-sm font-medium text-foreground">Màu phụ</label>
                   <div className="flex items-center gap-4">
                     <input
                       type="color"
@@ -156,7 +234,7 @@ export default function ThemeEditorPage() {
                         onClick={() => updateSetting('accentColor', color)}
                         className="w-8 h-8 rounded-lg border-2 border-border hover:scale-110 transition-transform"
                         style={{ backgroundColor: color }}
-                        aria-label={`Set accent color to ${color}`}
+                        aria-label={`Đặt màu phụ thành ${color}`}
                       />
                     ))}
                   </div>
@@ -172,7 +250,7 @@ export default function ThemeEditorPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h3 className="text-lg font-semibold text-foreground">Visual Effects</h3>
+              <h3 className="text-lg font-semibold text-foreground">Hiệu ứng hình ảnh</h3>
 
               <div className="space-y-6">
                 {/* Glow Intensity */}
@@ -180,7 +258,7 @@ export default function ThemeEditorPage() {
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
                       <Sun className="w-4 h-4" />
-                      Glow Intensity
+                      Cường độ glow
                     </label>
                     <span className="text-sm text-muted-foreground">{settings.glowIntensity}%</span>
                   </div>
@@ -199,7 +277,7 @@ export default function ThemeEditorPage() {
                   <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
                       <Droplets className="w-4 h-4" />
-                      Blur Intensity
+                      Cường độ blur
                     </label>
                     <span className="text-sm text-muted-foreground">{settings.blurIntensity}%</span>
                   </div>
@@ -215,41 +293,31 @@ export default function ThemeEditorPage() {
 
                 {/* Toggles */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30">
-                    <span className="font-medium text-foreground">Float Animation</span>
-                    <button
-                      onClick={() => updateSetting('floatAnimation', !settings.floatAnimation)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        settings.floatAnimation ? 'bg-[#8b5cf6]' : 'bg-secondary'
-                      }`}
-                      role="switch"
-                      aria-checked={settings.floatAnimation}
-                    >
-                      <span
-                        className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                          settings.floatAnimation ? 'left-7' : 'left-1'
+                  {[
+                    { key: 'floatAnimation' as const, label: 'Hiệu ứng nổi', desc: 'Các phần tử trang trí lơ lửng' },
+                    { key: 'noiseOverlay' as const, label: 'Noise Overlay', desc: 'Kết cấu hạt phim analog' },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between p-4 rounded-xl bg-secondary/30">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{label}</p>
+                        <p className="text-xs text-muted-foreground">{desc}</p>
+                      </div>
+                      <button
+                        onClick={() => updateSetting(key, !settings[key])}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${
+                          settings[key] ? 'bg-[#8b5cf6]' : 'bg-secondary'
                         }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30">
-                    <span className="font-medium text-foreground">Noise Overlay</span>
-                    <button
-                      onClick={() => updateSetting('noiseOverlay', !settings.noiseOverlay)}
-                      className={`relative w-12 h-6 rounded-full transition-colors ${
-                        settings.noiseOverlay ? 'bg-[#8b5cf6]' : 'bg-secondary'
-                      }`}
-                      role="switch"
-                      aria-checked={settings.noiseOverlay}
-                    >
-                      <span
-                        className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                          settings.noiseOverlay ? 'left-7' : 'left-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                        role="switch"
+                        aria-checked={settings[key]}
+                      >
+                        <span
+                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                            settings[key] ? 'translate-x-7' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -262,13 +330,13 @@ export default function ThemeEditorPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h3 className="text-lg font-semibold text-foreground">Particle Settings</h3>
+              <h3 className="text-lg font-semibold text-foreground">Cài đặt hạt</h3>
 
               <div className="space-y-6">
                 {/* Particle Count */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-foreground">Particle Count</label>
+                    <label className="text-sm font-medium text-foreground">Số lượng hạt</label>
                     <span className="text-sm text-muted-foreground">{settings.particleCount}</span>
                   </div>
                   <input
@@ -284,7 +352,7 @@ export default function ThemeEditorPage() {
                 {/* Particle Speed */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-foreground">Particle Speed</label>
+                    <label className="text-sm font-medium text-foreground">Tốc độ hạt</label>
                     <span className="text-sm text-muted-foreground">{settings.particleSpeed}%</span>
                   </div>
                   <input
@@ -309,15 +377,19 @@ export default function ThemeEditorPage() {
               onClick={() => setSettings(defaultSettings)}
             >
               <RotateCcw className="w-4 h-4" />
-              Reset to Default
+              Khôi phục mặc định
             </motion.button>
             <motion.button
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa] text-white rounded-xl font-medium hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all flex items-center justify-center gap-2"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 py-3 px-4 bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa] text-white rounded-xl font-medium hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Save className="w-4 h-4" />
-              Save Changes
+              {isSaving
+                ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <Save className="w-4 h-4" />}
+              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </motion.button>
           </div>
         </motion.div>
@@ -331,7 +403,7 @@ export default function ThemeEditorPage() {
           <div className="glass rounded-2xl p-6 sticky top-6">
             <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Live Preview
+              Xem trước
             </h3>
 
             {/* Mini preview */}
@@ -387,9 +459,30 @@ export default function ThemeEditorPage() {
                 />
               )}
             </div>
+
+            <p className="text-xs text-muted-foreground text-center mt-3">
+              Preview cập nhật real-time
+            </p>
           </div>
         </motion.div>
       </div>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-4 py-3 rounded-xl glass-strong border border-border shadow-2xl"
+          >
+            {toast.type === 'success'
+              ? <div className="w-7 h-7 rounded-full bg-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]"><CheckCircle className="w-4 h-4" /></div>
+              : <div className="w-7 h-7 rounded-full bg-destructive/20 flex items-center justify-center text-destructive"><AlertTriangle className="w-4 h-4" /></div>}
+            <p className="text-sm font-medium text-foreground">{toast.message}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

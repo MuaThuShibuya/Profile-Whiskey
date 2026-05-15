@@ -55,6 +55,7 @@ export const DEFAULT_PROFILE = {
     buttonGlow: 40,
     musicPlayerSize: 'normal',
     fontFamily: 'Inter',
+    useAvatarAsBackground: false,
   },
   effects: {
     enableParticles: true,

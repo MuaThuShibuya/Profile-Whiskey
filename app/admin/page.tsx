@@ -297,8 +297,10 @@ export default function AdminDashboard() {
             <div className="grid md:grid-cols-2 gap-5">
               {[
                 { label: 'Avatar URL', key: 'profile.avatar', placeholder: 'https://cdn.example.com/avatar.png' },
-                { label: 'Background URL (image/video)', key: 'profile.background', placeholder: 'https://cdn.example.com/bg.mp4' },
-                { label: 'Music URL (.mp3)', key: 'profile.music', placeholder: 'https://cdn.example.com/track.mp3' },
+                { label: 'Background URL (ảnh hoặc video)', key: 'profile.background', placeholder: 'https://cdn.example.com/bg.mp4' },
+                { label: 'Music URL (.mp3 / .ogg / .wav)', key: 'profile.music', placeholder: 'https://cdn.example.com/track.mp3' },
+                { label: 'Tên bài hát', key: 'profile.musicTitle', placeholder: 'Tên track...' },
+                { label: 'Nghệ sĩ', key: 'profile.musicArtist', placeholder: 'Tên nghệ sĩ...' },
               ].map(f => (
                 <div key={f.key} className="space-y-2">
                   <label className={lbl}>{f.label}</label>
@@ -381,6 +383,20 @@ export default function AdminDashboard() {
                   {['Inter','Geist','Poppins','Raleway','Space Grotesk','JetBrains Mono'].map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
+            </div>
+
+            {/* useAvatarAsBackground toggle */}
+            <div className="mt-4 flex items-center justify-between p-4 rounded-xl bg-secondary/30 border border-border/50">
+              <div>
+                <p className="text-sm font-medium text-foreground">Dùng avatar làm background</p>
+                <p className="text-xs text-muted-foreground">Khi bật và không có background URL, avatar sẽ được dùng làm ảnh nền mờ</p>
+              </div>
+              <button
+                onClick={() => setNested('theme.useAvatarAsBackground', !(formData.theme?.useAvatarAsBackground ?? false))}
+                className={`relative w-12 h-6 rounded-full transition-colors ${(formData.theme?.useAvatarAsBackground ?? false) ? 'bg-[#8b5cf6]' : 'bg-secondary'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${(formData.theme?.useAvatarAsBackground ?? false) ? 'translate-x-7' : 'translate-x-1'}`} />
+              </button>
             </div>
           </div>
 

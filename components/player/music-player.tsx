@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Repeat } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Play, Pause, Volume2, VolumeX, X } from 'lucide-react'
 
 interface MusicPlayerProps {
   src?: string
@@ -10,47 +10,49 @@ interface MusicPlayerProps {
   artist?: string
 }
 
-export function MusicPlayer({ src, title = 'Whispers of the Abyss', artist = 'Void Symphony' }: MusicPlayerProps) {
+export function MusicPlayer({ src, title, artist }: MusicPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(0.7)
   const [isMuted, setIsMuted] = useState(false)
-  const [isLooping, setIsLooping] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [hasAudio, setHasAudio] = useState(false)
-
+  const [loaded, setLoaded] = useState(false)
+  const [hasError, setHasError] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    if (!src) { setHasAudio(false); return }
+    if (!src) return
+    setLoaded(false)
+    setHasError(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setIsPlaying(false)
 
     const audio = new Audio()
     audio.preload = 'metadata'
-    audio.loop = isLooping
-    audio.volume = isMuted ? 0 : volume
+    audio.volume = 0.7
 
-    const onLoaded = () => { setDuration(audio.duration || 0); setHasAudio(true) }
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime)
-    const onEnded = () => { if (!isLooping) { setIsPlaying(false); setCurrentTime(0) } }
-    const onError = () => setHasAudio(false)
+    const onMeta = () => { setDuration(audio.duration || 0); setLoaded(true) }
+    const onTime = () => setCurrentTime(audio.currentTime)
+    const onEnded = () => { setIsPlaying(false); setCurrentTime(0) }
+    const onErr = () => setHasError(true)
 
-    audio.addEventListener('loadedmetadata', onLoaded)
-    audio.addEventListener('timeupdate', onTimeUpdate)
+    audio.addEventListener('loadedmetadata', onMeta)
+    audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('ended', onEnded)
-    audio.addEventListener('error', onError)
+    audio.addEventListener('error', onErr)
     audio.src = src
     audioRef.current = audio
 
     return () => {
       audio.pause()
-      audio.removeEventListener('loadedmetadata', onLoaded)
-      audio.removeEventListener('timeupdate', onTimeUpdate)
+      audio.removeEventListener('loadedmetadata', onMeta)
+      audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('ended', onEnded)
-      audio.removeEventListener('error', onError)
+      audio.removeEventListener('error', onErr)
       audioRef.current = null
     }
-  }, [src]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [src])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -63,164 +65,95 @@ export function MusicPlayer({ src, title = 'Whispers of the Abyss', artist = 'Vo
   }, [isPlaying])
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume
-  }, [volume, isMuted])
+    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : 0.7
+  }, [isMuted])
 
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.loop = isLooping
-  }, [isLooping])
-
-  const formatTime = (s: number) => {
-    if (!isFinite(s) || isNaN(s)) return '0:00'
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
+  if (!src || dismissed) return null
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || duration === 0) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const ratio = (e.clientX - rect.left) / rect.width
-    audioRef.current.currentTime = ratio * duration
+  const fmt = (s: number) => {
+    if (!isFinite(s) || isNaN(s) || s < 0) return '0:00'
+    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
   }
+
+  const trackLabel = hasError
+    ? 'Không thể tải nhạc'
+    : loaded
+      ? (title || 'Nhạc nền')
+      : 'Đang tải...'
+
+  const subLabel = hasError
+    ? null
+    : loaded
+      ? (artist || fmt(currentTime) + ' / ' + fmt(duration))
+      : null
 
   return (
     <motion.div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
-      initial={{ y: 100, opacity: 0 }}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40"
+      initial={{ y: 80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ delay: 1.5, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ delay: 1.2, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div className="relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#8b5cf6] via-[#38bdf8] to-[#a78bfa] rounded-2xl opacity-30 blur-sm" />
+      <div className="flex items-center gap-2.5 pl-3 pr-2 py-2 glass-strong rounded-full border border-white/10 shadow-xl min-w-[220px] max-w-[320px]">
 
-        <div className="relative glass-strong rounded-2xl overflow-hidden">
-          <div className="p-4">
-            <div className="flex items-center gap-4">
-              {/* Album art */}
-              <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#8b5cf6] to-[#38bdf8]" />
-                <AnimatePresence>
-                  {isPlaying && (
-                    <motion.div
-                      className="absolute inset-0 flex items-end justify-center gap-0.5 p-2"
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    >
-                      {[0, 1, 2, 3, 4].map(i => (
-                        <motion.div
-                          key={i} className="w-1.5 bg-white/80 rounded-full"
-                          animate={{ height: ['30%', '80%', '50%', '90%', '40%'] }}
-                          transition={{ duration: 0.5, repeat: Infinity, repeatType: 'reverse', delay: i * 0.1 }}
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+        {/* Play / Pause */}
+        <button
+          onClick={() => !hasError && setIsPlaying(p => !p)}
+          disabled={hasError || !loaded}
+          aria-label={isPlaying ? 'Tạm dừng' : 'Phát nhạc'}
+          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white
+            bg-gradient-to-r from-[var(--theme-primary,#8b5cf6)] to-[var(--theme-accent,#38bdf8)]
+            hover:scale-105 transition-transform disabled:opacity-40"
+        >
+          {isPlaying
+            ? <Pause className="w-3.5 h-3.5" />
+            : <Play className="w-3.5 h-3.5 ml-0.5" />}
+        </button>
 
-              {/* Track info */}
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-foreground truncate">{title}</h4>
-                <p className="text-xs text-muted-foreground truncate">
-                  {hasAudio ? artist : src ? 'Loading...' : 'No track configured'}
-                </p>
-              </div>
+        {/* Info + Progress */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <p className="text-xs font-medium text-white leading-tight truncate">{trackLabel}</p>
 
-              {/* Controls */}
-              <div className="flex items-center gap-2">
-                <motion.button
-                  className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                  whileTap={{ scale: 0.9 }} aria-label="Previous"
-                  onClick={() => { if (audioRef.current) { audioRef.current.currentTime = 0; setCurrentTime(0) } }}
-                  disabled={!hasAudio}
-                >
-                  <SkipBack className="w-4 h-4" />
-                </motion.button>
-
-                <motion.button
-                  className="p-3 rounded-full bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa] text-white shadow-lg shadow-[#8b5cf6]/30 disabled:opacity-40"
-                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                  disabled={!hasAudio}
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                </motion.button>
-
-                <motion.button
-                  className="p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                  whileTap={{ scale: 0.9 }} aria-label="Next" disabled={!hasAudio}
-                >
-                  <SkipForward className="w-4 h-4" />
-                </motion.button>
-              </div>
-            </div>
-
-            {/* Progress bar */}
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-8">{formatTime(currentTime)}</span>
+          {!hasError && (
+            <div
+              className="mt-1 h-0.5 bg-white/15 rounded-full cursor-pointer"
+              onClick={e => {
+                if (!audioRef.current || !duration) return
+                const r = e.currentTarget.getBoundingClientRect()
+                audioRef.current.currentTime = ((e.clientX - r.left) / r.width) * duration
+              }}
+            >
               <div
-                className="flex-1 h-1 bg-secondary rounded-full overflow-hidden cursor-pointer"
-                onClick={handleSeek}
-              >
-                <motion.div
-                  className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#38bdf8] pointer-events-none"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-muted-foreground w-8 text-right">{formatTime(duration)}</span>
+                className="h-full rounded-full bg-gradient-to-r from-[var(--theme-primary,#8b5cf6)] to-[var(--theme-accent,#38bdf8)]"
+                style={{ width: `${progress}%`, transition: 'width 0.5s linear' }}
+              />
             </div>
+          )}
 
-            {/* Expanded controls */}
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.div
-                  className="mt-3 flex items-center justify-between"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <motion.button
-                    className={`p-1.5 rounded-full transition-colors ${isLooping ? 'text-[#8b5cf6]' : 'text-muted-foreground hover:text-foreground'}`}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setIsLooping(!isLooping)}
-                    aria-label="Toggle loop"
-                  >
-                    <Repeat className="w-3.5 h-3.5" />
-                  </motion.button>
-
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      className="p-1.5 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setIsMuted(!isMuted)}
-                      aria-label={isMuted ? 'Unmute' : 'Mute'}
-                    >
-                      {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    </motion.button>
-                    <input
-                      type="range" min="0" max="1" step="0.05"
-                      value={isMuted ? 0 : volume}
-                      onChange={e => { setVolume(parseFloat(e.target.value)); setIsMuted(false) }}
-                      className="w-16 h-1 accent-[#8b5cf6] cursor-pointer"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Expand toggle */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            aria-label="Expand player"
-          >
-            <span className="text-[10px]">{isExpanded ? '▼' : '▲'}</span>
-          </button>
+          {subLabel && (
+            <p className="text-[10px] text-white/40 mt-0.5 truncate leading-tight">{subLabel}</p>
+          )}
         </div>
+
+        {/* Mute */}
+        <button
+          onClick={() => setIsMuted(m => !m)}
+          aria-label={isMuted ? 'Bỏ tắt tiếng' : 'Tắt tiếng'}
+          className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-white/45 hover:text-white transition-colors"
+        >
+          {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+        </button>
+
+        {/* Dismiss */}
+        <button
+          onClick={() => { audioRef.current?.pause(); setDismissed(true) }}
+          aria-label="Đóng player"
+          className="w-6 h-6 flex-shrink-0 flex items-center justify-center text-white/30 hover:text-white/70 transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
       </div>
     </motion.div>
   )

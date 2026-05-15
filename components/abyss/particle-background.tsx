@@ -2,104 +2,74 @@
 
 import { useEffect, useRef } from 'react'
 
-interface Particle {
-  x: number
-  y: number
-  size: number
-  speedX: number
-  speedY: number
-  opacity: number
-  color: string
+interface Props {
+  count?: number
 }
 
-export function ParticleBackground() {
+export function ParticleBackground({ count = 35 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const resizeCanvas = () => {
+    let rafId: number
+
+    const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
     }
+    resize()
+    window.addEventListener('resize', resize, { passive: true })
 
-    resizeCanvas()
-    window.addEventListener('resize', resizeCanvas)
-
-    const particles: Particle[] = []
-    const particleCount = 80
-    const colors = [
-      'rgba(139, 92, 246, opacity)', // purple
-      'rgba(56, 189, 248, opacity)',  // ice blue
-      'rgba(167, 139, 250, opacity)', // violet
-      'rgba(236, 72, 153, opacity)',  // pink
+    const palette: [number, number, number][] = [
+      [139, 92, 246],
+      [56, 189, 248],
+      [167, 139, 250],
+      [236, 72, 153],
     ]
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
+    const n = Math.min(Math.max(count, 10), 60)
+    const particles = Array.from({ length: n }, () => {
+      const [r, g, b] = palette[Math.floor(Math.random() * palette.length)]
+      return {
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        size: Math.random() * 2 + 0.5,
-        speedX: (Math.random() - 0.5) * 0.3,
-        speedY: (Math.random() - 0.5) * 0.3,
-        opacity: Math.random() * 0.5 + 0.1,
-        color: colors[Math.floor(Math.random() * colors.length)],
-      })
-    }
+        size: Math.random() * 1.6 + 0.4,
+        sx: (Math.random() - 0.5) * 0.22,
+        sy: (Math.random() - 0.5) * 0.22,
+        op: Math.random() * 0.4 + 0.06,
+        r, g, b,
+      }
+    })
 
-    const animate = () => {
+    const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      const W = canvas.width
+      const H = canvas.height
 
-      particles.forEach((particle) => {
-        particle.x += particle.speedX
-        particle.y += particle.speedY
-
-        if (particle.x < 0) particle.x = canvas.width
-        if (particle.x > canvas.width) particle.x = 0
-        if (particle.y < 0) particle.y = canvas.height
-        if (particle.y > canvas.height) particle.y = 0
+      for (const p of particles) {
+        p.x = ((p.x + p.sx) + W) % W
+        p.y = ((p.y + p.sy) + H) % H
 
         ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = particle.color.replace('opacity', particle.opacity.toString())
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.op})`
         ctx.fill()
+      }
 
-        // Add glow effect
-        ctx.shadowBlur = 15
-        ctx.shadowColor = particle.color.replace('opacity', '0.5')
-      })
-
-      // Draw connection lines
-      particles.forEach((particle, i) => {
-        particles.slice(i + 1).forEach((otherParticle) => {
-          const dx = particle.x - otherParticle.x
-          const dy = particle.y - otherParticle.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-
-          if (distance < 120) {
-            ctx.beginPath()
-            ctx.moveTo(particle.x, particle.y)
-            ctx.lineTo(otherParticle.x, otherParticle.y)
-            ctx.strokeStyle = `rgba(139, 92, 246, ${0.1 * (1 - distance / 120)})`
-            ctx.lineWidth = 0.5
-            ctx.stroke()
-          }
-        })
-      })
-
-      requestAnimationFrame(animate)
+      rafId = requestAnimationFrame(draw)
     }
 
-    animate()
+    draw()
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas)
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('resize', resize)
     }
-  }, [])
+  }, [count])
 
   return (
     <canvas

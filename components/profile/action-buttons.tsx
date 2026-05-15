@@ -203,13 +203,13 @@ export function ActionButtons({ botInvite: _botInvite }: ActionButtonsProps) {
 
       } else if (modalType === 'Send Video' || modalType === 'Send Image') {
         if (!file) { showToast('Vui lòng chọn file', 'error'); return }
-        if (file.size > 100 * 1024 * 1024) { showToast('File quá lớn. Tối đa 100MB', 'error'); return }
+        if (file.size > 4 * 1024 * 1024) { showToast('File quá lớn. Tối đa 4MB cho ảnh, 10MB cho audio', 'error'); return }
 
         const fd = new FormData()
         fd.append('file', file)
         const uploadRes = await fetch('/api/media/upload', { method: 'POST', body: fd })
         const uploadData = await uploadRes.json()
-        if (!uploadData.success) { showToast(uploadData.message || 'Lỗi upload file', 'error'); return }
+        if (!uploadData.success) { showToast(uploadData.message || 'Không thể tải lên media. Vui lòng thử lại sau.', 'error'); return }
 
         const saveRes = await fetch('/api/media/request', {
           method: 'POST',
@@ -219,9 +219,16 @@ export function ActionButtons({ botInvite: _botInvite }: ActionButtonsProps) {
             message,
             senderName,
             fileName: file.name,
-            fileUrl: uploadData.fileUrl,
+            fileUrl: uploadData.secureUrl || uploadData.fileUrl,
+            secureUrl: uploadData.secureUrl,
+            publicId: uploadData.publicId,
+            cloudinaryResourceType: uploadData.cloudinaryResourceType,
             mimeType: uploadData.mimeType,
             fileSize: uploadData.fileSize,
+            format: uploadData.format,
+            width: uploadData.width,
+            height: uploadData.height,
+            duration: uploadData.duration,
           }),
         })
         const saveData = await saveRes.json()

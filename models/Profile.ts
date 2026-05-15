@@ -65,6 +65,7 @@ const ProfileSchema = new mongoose.Schema({
     buttonGlow: { type: Number, default: 40 },
     musicPlayerSize: { type: String, default: 'normal' },
     fontFamily: { type: String, default: 'Inter' },
+    useAvatarAsBackground: { type: Boolean, default: false },
   },
   effects: {
     enableParticles: { type: Boolean, default: true },

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const {v2} = require\\('cloudinary'\\); v2.config\\({cloud_name:'test',api_key:'test',api_secret:'test'}\\); console.log\\('config ok'\\)\")",
+      "Read(//c/Users/xiaog/.claude/projects/c--Users-xiaog-OneDrive-M-y-t-nh-VsCode-Profile-Whiskey/memory/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\xiaog\\.claude\\projects\\c--Users-xiaog-OneDrive-M-y-t-nh-VsCode-Profile-Whiskey\\memory"
+    ]
+  }
+}

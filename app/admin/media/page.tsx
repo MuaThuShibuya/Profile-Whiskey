@@ -16,12 +16,23 @@ interface MediaItem {
   senderName: string
   fileName: string
   fileUrl: string
+  secureUrl?: string    // Cloudinary secure URL (preferred)
+  publicId?: string
   mimeType: string
   fileSize: number
+  format?: string
+  width?: number
+  height?: number
+  duration?: number
   status: string
   reviewedAt?: string
   reviewedBy?: string
   createdAt: string
+}
+
+// Helper: always return the best available URL
+function mediaUrl(item: MediaItem): string {
+  return item.secureUrl || item.fileUrl || ''
 }
 
 const PAGE_SIZE = 12
@@ -217,13 +228,13 @@ export default function AdminMediaPage() {
             >
               {/* Media preview */}
               <div className="relative aspect-square bg-secondary/50">
-                {item.fileUrl && item.type === 'image' ? (
+                {mediaUrl(item) && item.type === 'image' ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.fileUrl} alt={item.fileName || 'media'}
+                  <img src={mediaUrl(item)} alt={item.fileName || 'media'}
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                ) : item.fileUrl && item.type === 'video' ? (
+                ) : mediaUrl(item) && (item.type === 'video' || item.type === 'audio') ? (
                   <div className="w-full h-full flex items-center justify-center bg-secondary/80">
                     <Play className="w-8 h-8 text-white/60" />
                   </div>
@@ -297,12 +308,12 @@ export default function AdminMediaPage() {
 
               {/* Media */}
               <div className="relative bg-black/50 max-h-96 flex items-center justify-center">
-                {modal.fileUrl && modal.type === 'image' ? (
+                {mediaUrl(modal) && modal.type === 'image' ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={modal.fileUrl} alt={modal.fileName || 'media'}
+                  <img src={mediaUrl(modal)} alt={modal.fileName || 'media'}
                     className="max-h-96 max-w-full object-contain" />
-                ) : modal.fileUrl && modal.type === 'video' ? (
-                  <video ref={videoRef} src={modal.fileUrl} controls
+                ) : mediaUrl(modal) && (modal.type === 'video' || modal.type === 'audio') ? (
+                  <video ref={videoRef} src={mediaUrl(modal)} controls
                     className="max-h-96 max-w-full"
                     preload="metadata" />
                 ) : (
@@ -345,6 +356,13 @@ export default function AdminMediaPage() {
                 {modal.fileName && (
                   <p className="text-xs text-muted-foreground font-mono">📁 {modal.fileName}</p>
                 )}
+                {(modal.width && modal.height) && (
+                  <p className="text-xs text-muted-foreground">
+                    📐 {modal.width}×{modal.height}px
+                    {modal.format && ` · ${modal.format.toUpperCase()}`}
+                    {modal.duration && ` · ${modal.duration.toFixed(1)}s`}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Gửi lúc: {new Date(modal.createdAt).toLocaleString('vi-VN')}
                   {modal.reviewedAt && ` · Duyệt lúc: ${new Date(modal.reviewedAt).toLocaleString('vi-VN')}`}
@@ -370,8 +388,8 @@ export default function AdminMediaPage() {
                       <Archive className="w-4 h-4" /> Lưu trữ
                     </button>
                   )}
-                  {modal.fileUrl && (
-                    <a href={modal.fileUrl} download target="_blank" rel="noopener noreferrer"
+                  {mediaUrl(modal) && (
+                    <a href={mediaUrl(modal)} download target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#8b5cf6]/20 text-[#a78bfa] hover:bg-[#8b5cf6]/30 transition-colors text-sm">
                       <Download className="w-4 h-4" /> Tải xuống
                     </a>

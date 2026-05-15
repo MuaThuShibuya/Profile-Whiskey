@@ -10,7 +10,9 @@
       "Bash(New-Item -ItemType File -Force -Path \"c:\\\\Users\\\\xiaog\\\\OneDrive\\\\Máy tính\\\\VsCode\\\\Profile Whiskey\\\\public\\\\uploads\\\\.gitkeep\")",
       "Bash(Write-Host \"Done\")",
       "Bash(Get-ChildItem -Recurse -Path app -Include *.tsx,*.ts)",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(node -e \"require\\('cloudinary'\\); console.log\\('cloudinary ok'\\)\")",
+      "Bash(npx tsc *)"
     ]
   }
 }

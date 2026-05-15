@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { AuroraBackground } from '@/components/abyss/aurora-background'
+import { DynamicBackground } from '@/components/abyss/dynamic-background'
 import { ParticleBackground } from '@/components/abyss/particle-background'
 import { MusicPlayer } from '@/components/player/music-player'
 import { StatusBadge } from '@/components/profile/status-badge'
@@ -33,7 +33,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   youtube: 'YouTube', github: 'GitHub', instagram: 'Instagram', spotify: 'Spotify',
 }
 
-/* ─── Bot types & status ─── */
+/* ─── Bot types ─── */
 interface BotDemoMedia { url: string; type: 'image' | 'video'; caption: string }
 interface BotData {
   _id: string; name: string; slug: string; avatarUrl: string
@@ -49,10 +49,11 @@ const BOT_STATUS: Record<string, { label: string; color: string }> = {
   hidden:      { label: 'Ẩn',         color: 'text-gray-400 bg-gray-400/10 border-gray-400/20' },
 }
 
-/* ─── Bot demo media modal ─── */
+/* ─── Bot demo modal ─── */
 function BotDemoModal({ bot, onClose }: { bot: BotData; onClose: () => void }) {
   const [idx, setIdx] = useState(0)
   const media = bot.demoMedia
+
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -62,6 +63,7 @@ function BotDemoModal({ bot, onClose }: { bot: BotData; onClose: () => void }) {
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [media.length, onClose])
+
   const cur = media[idx]
   return (
     <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
@@ -77,18 +79,26 @@ function BotDemoModal({ bot, onClose }: { bot: BotData; onClose: () => void }) {
               : <div className="w-7 h-7 rounded-full bg-[#8b5cf6]/20 flex items-center justify-center"><Bot className="w-3.5 h-3.5 text-[#8b5cf6]" /></div>}
             <span className="font-semibold text-white text-sm">{bot.name} — Demo</span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-muted-foreground hover:text-white transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
         <div className="relative flex items-center justify-center bg-black/30 min-h-[200px] max-h-[55vh]">
           {cur.type === 'video'
             ? <video src={cur.url} controls className="max-h-[55vh] max-w-full object-contain" />
             : <img src={cur.url} alt={cur.caption} className="max-h-[55vh] max-w-full object-contain" loading="lazy" />}
-          {media.length > 1 && <>
-            <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}
-              className="absolute left-2 p-2 rounded-full glass text-white disabled:opacity-30 hover:bg-white/10"><ChevronLeft className="w-4 h-4" /></button>
-            <button onClick={() => setIdx(i => Math.min(media.length - 1, i + 1))} disabled={idx === media.length - 1}
-              className="absolute right-2 p-2 rounded-full glass text-white disabled:opacity-30 hover:bg-white/10"><ChevronLeft className="w-4 h-4 rotate-180" /></button>
-          </>}
+          {media.length > 1 && (
+            <>
+              <button onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}
+                className="absolute left-2 p-2 rounded-full glass text-white disabled:opacity-30 hover:bg-white/10">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => setIdx(i => Math.min(media.length - 1, i + 1))} disabled={idx === media.length - 1}
+                className="absolute right-2 p-2 rounded-full glass text-white disabled:opacity-30 hover:bg-white/10">
+                <ChevronLeft className="w-4 h-4 rotate-180" />
+              </button>
+            </>
+          )}
         </div>
         <div className="px-5 py-3 flex items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground truncate">{cur.caption || `Media ${idx + 1}`}</p>
@@ -99,7 +109,7 @@ function BotDemoModal({ bot, onClose }: { bot: BotData; onClose: () => void }) {
   )
 }
 
-/* ─── Upload form modal ─── */
+/* ─── Upload modal ─── */
 function UploadModal({ onClose }: { onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null)
   const [senderName, setSenderName] = useState('')
@@ -112,7 +122,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file) { setError('Vui lòng chọn file'); return }
-    if (file.size > 100 * 1024 * 1024) { setError('File quá lớn (tối đa 100MB)'); return }
+    if (file.size > 4 * 1024 * 1024) { setError('File quá lớn (tối đa 4MB)'); return }
 
     setUploading(true)
     setError('')
@@ -121,23 +131,23 @@ function UploadModal({ onClose }: { onClose: () => void }) {
       fd.append('file', file)
       const uploadRes = await fetch('/api/media/upload', { method: 'POST', body: fd })
       const uploadData = await uploadRes.json()
-      if (!uploadData.success) { setError(uploadData.message || 'Lỗi upload'); return }
+      if (!uploadData.success) { setError(uploadData.message || 'Không thể tải lên. Vui lòng thử lại.'); return }
 
       const saveRes = await fetch('/api/media/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: uploadData.type,
-          message,
-          senderName,
-          fileName: file.name,
-          fileUrl: uploadData.fileUrl,
-          mimeType: uploadData.mimeType,
-          fileSize: uploadData.fileSize,
+          type: uploadData.type, message, senderName, fileName: file.name,
+          fileUrl: uploadData.secureUrl || uploadData.fileUrl,
+          secureUrl: uploadData.secureUrl, publicId: uploadData.publicId,
+          cloudinaryResourceType: uploadData.cloudinaryResourceType,
+          mimeType: uploadData.mimeType, fileSize: uploadData.fileSize,
+          format: uploadData.format, width: uploadData.width,
+          height: uploadData.height, duration: uploadData.duration,
         }),
       })
       const saveData = await saveRes.json()
-      if (saveData.success) { setDone(true) }
+      if (saveData.success) setDone(true)
       else setError(saveData.message || 'Lỗi lưu request')
     } catch { setError('Lỗi kết nối') }
     finally { setUploading(false) }
@@ -150,7 +160,6 @@ function UploadModal({ onClose }: { onClose: () => void }) {
       <motion.div className="w-full max-w-md glass-strong rounded-2xl p-6 border border-border"
         initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
         onClick={e => e.stopPropagation()}>
-
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold bg-gradient-to-r from-white to-[#a78bfa] bg-clip-text text-transparent">
             Gửi ảnh / video cho tôi
@@ -183,9 +192,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-xs text-muted-foreground mb-1.5 uppercase tracking-wide">Chọn ảnh hoặc video *</label>
               <div
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
-                  file ? 'border-[#8b5cf6]/50 bg-[#8b5cf6]/5' : 'border-border hover:border-[#8b5cf6]/30'
-                }`}
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${file ? 'border-[#8b5cf6]/50 bg-[#8b5cf6]/5' : 'border-border hover:border-[#8b5cf6]/30'}`}
                 onClick={() => inputRef.current?.click()}
               >
                 <input ref={inputRef} type="file" className="hidden"
@@ -203,7 +210,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
                   <div className="space-y-1">
                     <Upload className="w-8 h-8 text-muted-foreground/40 mx-auto" />
                     <p className="text-sm text-muted-foreground">Click để chọn file</p>
-                    <p className="text-xs text-muted-foreground/60">JPG, PNG, WebP, GIF, MP4, WebM · Tối đa 100MB</p>
+                    <p className="text-xs text-muted-foreground/60">JPG, PNG, WebP, GIF, MP4, WebM · Tối đa 4MB</p>
                   </div>
                 )}
               </div>
@@ -237,7 +244,6 @@ function UploadModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-
 /* ─── Main page ─── */
 export default function ProfilePage() {
   const [config, setConfig] = useState<any>(null)
@@ -251,11 +257,20 @@ export default function ProfilePage() {
     Promise.all([
       fetch('/api/profile').then(r => r.json()),
       fetch('/api/bots').then(r => r.json()),
-    ]).then(([profile, botsJson]) => {
-      if (profile.success) setConfig(profile.data)
+    ]).then(([profileJson, botsJson]) => {
+      if (profileJson.success) setConfig(profileJson.data)
       if (botsJson.success) setBots(botsJson.data)
     }).finally(() => setMounted(true))
   }, [])
+
+  /* Apply theme CSS vars */
+  useEffect(() => {
+    if (!config?.theme) return
+    const root = document.documentElement
+    const t = config.theme
+    if (t.primaryColor) root.style.setProperty('--theme-primary', t.primaryColor)
+    if (t.accentColor) root.style.setProperty('--theme-accent', t.accentColor)
+  }, [config])
 
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -275,17 +290,30 @@ export default function ProfilePage() {
     </div>
   )
 
-  const { profile, social, bank } = config
-  const activeSocials = social ? Object.entries(social as Record<string, string>).filter(([, v]) => v?.trim()) : []
+  const { profile, theme, effects, social, bank } = config
+  const activeSocials = social
+    ? Object.entries(social as Record<string, string>).filter(([, v]) => v?.trim())
+    : []
   const hasDonate = bank?.bankName || bank?.accountNumber || bank?.qrCode
+
+  const enableParticles = effects?.enableParticles !== false
+  const enableMusicPlayer = effects?.enableMusicPlayer !== false
+  const particleCount = Math.min(theme?.particleCount ?? 35, 60)
+  const hasMusicPlayer = enableMusicPlayer && !!profile?.music
 
   return (
     <main className="relative min-h-screen overflow-hidden">
-      <AuroraBackground />
-      <ParticleBackground />
+      <DynamicBackground
+        bgUrl={profile?.background}
+        avatarUrl={profile?.avatar}
+        useAvatarAsBg={theme?.useAvatarAsBackground ?? false}
+        primaryColor={theme?.primaryColor}
+        accentColor={theme?.accentColor}
+      />
+      {enableParticles && <ParticleBackground count={particleCount} />}
 
-      <div className="relative z-10 min-h-screen px-4 py-12 md:py-20">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <div className={`relative z-10 min-h-screen px-4 py-10 md:py-16 ${hasMusicPlayer ? 'pb-24' : 'pb-10'}`}>
+        <div className="max-w-2xl mx-auto space-y-4">
 
           {/* Back */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -297,56 +325,54 @@ export default function ProfilePage() {
           </motion.div>
 
           {/* ── Profile Header ── */}
-          <motion.div className="glass-strong rounded-2xl p-6"
+          <motion.div className="glass-strong rounded-2xl p-5"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="absolute -inset-1 bg-gradient-to-r from-[#8b5cf6] via-[#38bdf8] to-[#a78bfa] rounded-full opacity-60 blur-md" />
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-[#1a1a2e]">
-                  {profile.avatar ? (
-                    <Image src={profile.avatar} alt={profile.displayName} fill className="object-cover" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-[var(--theme-primary,#8b5cf6)] via-[var(--theme-accent,#38bdf8)] to-[var(--theme-primary,#8b5cf6)] rounded-full opacity-55 blur-md" />
+                <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-[#1a1a2e]">
+                  {profile?.avatar ? (
+                    <Image src={profile.avatar} alt={profile.displayName ?? ''} fill className="object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#8b5cf6] to-[#38bdf8] flex items-center justify-center text-3xl font-bold text-white">
-                      {profile.displayName?.[0]?.toUpperCase() ?? '?'}
+                    <div className="w-full h-full bg-gradient-to-br from-[var(--theme-primary,#8b5cf6)] to-[var(--theme-accent,#38bdf8)] flex items-center justify-center text-2xl font-bold text-white">
+                      {profile?.displayName?.[0]?.toUpperCase() ?? '?'}
                     </div>
                   )}
                 </div>
-                <StatusBadge status={profile.status ?? 'online'} />
+                <StatusBadge status={profile?.status ?? 'online'} />
               </div>
 
               {/* Info */}
               <div className="flex-1 text-center sm:text-left">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-[#a78bfa] to-[#38bdf8] bg-clip-text text-transparent">
-                  {profile.displayName}
+                <h1 className="text-xl font-bold bg-gradient-to-r from-white via-[var(--theme-primary,#a78bfa)] to-[var(--theme-accent,#38bdf8)] bg-clip-text text-transparent">
+                  {profile?.displayName}
                 </h1>
-                {profile.username && (
-                  <p className="text-muted-foreground text-sm font-mono mt-0.5">@{profile.username}</p>
+                {profile?.username && (
+                  <p className="text-muted-foreground text-xs font-mono mt-0.5">@{profile.username}</p>
                 )}
-                {profile.bio && (
-                  <p className="text-foreground/80 text-sm mt-2 leading-relaxed">{profile.bio}</p>
+                {profile?.bio && (
+                  <p className="text-foreground/75 text-sm mt-2 leading-relaxed">{profile.bio}</p>
                 )}
-                {profile.quote && (
-                  <p className="text-[#a78bfa] text-xs italic mt-1.5">"{profile.quote}"</p>
+                {profile?.quote && (
+                  <p className="text-[var(--theme-primary,#a78bfa)] text-xs italic mt-1.5">&ldquo;{profile.quote}&rdquo;</p>
                 )}
-                <div className="flex items-center justify-center sm:justify-start gap-4 mt-3 text-xs text-muted-foreground">
-                  {profile.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {profile.location}
-                    </span>
+                <div className="flex items-center justify-center sm:justify-start gap-4 mt-2 text-xs text-muted-foreground">
+                  {profile?.location && (
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {profile.location}</span>
                   )}
                   <span className="flex items-center gap-1">
-                    <Eye className="w-3 h-3" /> {(profile.viewCount ?? 0).toLocaleString()} lượt xem
+                    <Eye className="w-3 h-3" /> {(profile?.viewCount ?? 0).toLocaleString()} lượt xem
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Send media button */}
-            <div className="mt-5 pt-5 border-t border-border/50 flex justify-center">
+            <div className="mt-4 pt-4 border-t border-border/50 flex justify-center">
               <motion.button
                 onClick={() => setShowUpload(true)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa] text-white font-medium text-sm hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[var(--theme-primary,#8b5cf6)] to-[#a78bfa] text-white font-medium text-sm hover:shadow-lg hover:shadow-[var(--theme-primary,#8b5cf6)]/30 transition-all"
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Upload className="w-4 h-4" />
                 Gửi ảnh / video cho tôi
@@ -356,17 +382,17 @@ export default function ProfilePage() {
 
           {/* ── Social Links ── */}
           {activeSocials.length > 0 && (
-            <motion.div className="glass-strong rounded-2xl p-6"
+            <motion.div className="glass-strong rounded-2xl p-5"
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Mạng xã hội</h2>
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Mạng xã hội</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {activeSocials.map(([platform, url]) => (
                   <a key={platform} href={url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-secondary/50 border border-border hover:border-[#8b5cf6]/40 hover:bg-secondary transition-all text-sm group">
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-secondary/50 border border-border hover:border-[var(--theme-primary,#8b5cf6)]/40 hover:bg-secondary transition-all text-sm group">
                     <span className="text-foreground/70 group-hover:text-foreground transition-colors">
                       <SocialIcon platform={platform} />
                     </span>
-                    <span className="font-medium text-foreground/80 group-hover:text-foreground transition-colors">
+                    <span className="font-medium text-foreground/80 group-hover:text-foreground transition-colors text-sm">
                       {PLATFORM_LABELS[platform] ?? platform}
                     </span>
                     <ExternalLink className="w-3 h-3 text-muted-foreground/40 ml-auto" />
@@ -378,55 +404,51 @@ export default function ProfilePage() {
 
           {/* ── Donate ── */}
           {hasDonate && (
-            <motion.div className="glass-strong rounded-2xl p-6"
+            <motion.div className="glass-strong rounded-2xl p-5"
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4 flex items-center gap-2">
-                <Heart className="w-4 h-4 text-red-400" /> Donate / Ủng hộ
+              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+                <Heart className="w-3.5 h-3.5 text-red-400" /> Donate / Ủng hộ
               </h2>
 
-              <div className="flex flex-col sm:flex-row gap-5 items-start">
+              <div className="flex flex-col sm:flex-row gap-4 items-start">
                 {bank.qrCode && (
                   <div className="flex-shrink-0">
-                    <div className="w-36 h-36 bg-white rounded-xl p-2 shadow-lg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <div className="w-28 h-28 bg-white rounded-xl p-2 shadow-lg">
                       <img src={bank.qrCode} alt="QR Donate" className="w-full h-full object-contain rounded-lg" />
                     </div>
-                    <p className="text-xs text-center text-muted-foreground mt-2">Quét QR để donate</p>
+                    <p className="text-xs text-center text-muted-foreground mt-1.5">Quét QR để donate</p>
                   </div>
                 )}
-
-                <div className="flex-1 space-y-2.5">
+                <div className="flex-1 space-y-2">
                   {bank.bankName && (
-                    <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/40 border border-border/50">
+                    <div className="flex justify-between items-center p-2.5 rounded-lg bg-secondary/40 border border-border/50">
                       <span className="text-xs text-muted-foreground">Ngân hàng</span>
                       <span className="font-medium text-sm">{bank.bankName}</span>
                     </div>
                   )}
                   {bank.accountNumber && (
-                    <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/40 border border-border/50">
+                    <div className="flex justify-between items-center p-2.5 rounded-lg bg-secondary/40 border border-border/50">
                       <span className="text-xs text-muted-foreground">Số TK</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-medium text-sm">{bank.accountNumber}</span>
-                        <button onClick={() => copy(bank.accountNumber, 'acc')}
-                          className="p-1 rounded-lg hover:bg-secondary transition-colors">
+                        <button onClick={() => copy(bank.accountNumber, 'acc')} className="p-1 rounded-lg hover:bg-secondary transition-colors">
                           {copied === 'acc' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
                         </button>
                       </div>
                     </div>
                   )}
                   {bank.accountName && (
-                    <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/40 border border-border/50">
+                    <div className="flex justify-between items-center p-2.5 rounded-lg bg-secondary/40 border border-border/50">
                       <span className="text-xs text-muted-foreground">Chủ TK</span>
                       <span className="font-medium text-sm">{bank.accountName}</span>
                     </div>
                   )}
                   {bank.transferContent && (
-                    <div className="flex justify-between items-center p-3 rounded-xl bg-secondary/40 border border-border/50">
+                    <div className="flex justify-between items-center p-2.5 rounded-lg bg-secondary/40 border border-border/50">
                       <span className="text-xs text-muted-foreground">Nội dung</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-[#a78bfa]">{bank.transferContent}</span>
-                        <button onClick={() => copy(bank.transferContent, 'msg')}
-                          className="p-1 rounded-lg hover:bg-secondary transition-colors">
+                        <span className="text-sm text-[var(--theme-primary,#a78bfa)]">{bank.transferContent}</span>
+                        <button onClick={() => copy(bank.transferContent, 'msg')} className="p-1 rounded-lg hover:bg-secondary transition-colors">
                           {copied === 'msg' ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground" />}
                         </button>
                       </div>
@@ -443,29 +465,28 @@ export default function ProfilePage() {
 
           {/* ── Discord Bots ── */}
           {bots.length > 0 && (
-            <motion.div className="glass-strong rounded-2xl p-6"
+            <motion.div className="glass-strong rounded-2xl p-5"
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                  <Bot className="w-4 h-4 text-[#38bdf8]" /> Discord Bot
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <Bot className="w-3.5 h-3.5 text-[var(--theme-accent,#38bdf8)]" /> Discord Bot
                 </h2>
-                <a href="/bots" className="inline-flex items-center gap-1 text-xs text-[#a78bfa] hover:text-white transition-colors group">
+                <a href="/bots" className="inline-flex items-center gap-1 text-xs text-[var(--theme-primary,#a78bfa)] hover:text-white transition-colors group">
                   Xem tất cả <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </a>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {bots.map(bot => {
                   const st = BOT_STATUS[bot.status] ?? BOT_STATUS.active
                   const StatusIcon = bot.status === 'maintenance' ? Wrench : bot.status === 'beta' ? Sparkles : null
                   return (
-                    <div key={bot._id} className="flex items-start gap-4 p-4 rounded-xl bg-secondary/30 border border-border/50 hover:border-[#8b5cf6]/30 transition-colors">
+                    <div key={bot._id} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50 hover:border-[var(--theme-primary,#8b5cf6)]/30 transition-colors">
                       {bot.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={bot.avatarUrl} alt={bot.name} className="w-12 h-12 rounded-xl object-cover border border-border shrink-0" loading="lazy" />
+                        <img src={bot.avatarUrl} alt={bot.name} className="w-10 h-10 rounded-xl object-cover border border-border shrink-0" loading="lazy" />
                       ) : (
-                        <div className="w-12 h-12 rounded-xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center shrink-0">
-                          <Bot className="w-6 h-6 text-[#8b5cf6]" />
+                        <div className="w-10 h-10 rounded-xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center shrink-0">
+                          <Bot className="w-5 h-5 text-[#8b5cf6]" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -527,7 +548,13 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <MusicPlayer src={config.profile?.music} />
+      {hasMusicPlayer && (
+        <MusicPlayer
+          src={profile.music}
+          title={profile.musicTitle || undefined}
+          artist={profile.musicArtist || undefined}
+        />
+      )}
     </main>
   )
 }

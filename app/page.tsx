@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Lock, Bot, ArrowRight } from 'lucide-react'
-import { AuroraBackground } from '@/components/abyss/aurora-background'
+import { DynamicBackground } from '@/components/abyss/dynamic-background'
 import { ParticleBackground } from '@/components/abyss/particle-background'
 import { ProfileCard } from '@/components/profile/profile-card'
 import { ActionButtons } from '@/components/profile/action-buttons'
@@ -31,7 +31,7 @@ export default function HomePage() {
   const [botCount, setBotCount] = useState(0)
 
   useEffect(() => {
-    const initProfile = async () => {
+    const init = async () => {
       try {
         const [, profileRes, botsRes] = await Promise.all([
           fetch('/api/profile/views', { method: 'POST' }),
@@ -39,157 +39,160 @@ export default function HomePage() {
           fetch('/api/bots'),
         ])
 
-        const profileText = await profileRes.text()
         try {
-          const json = JSON.parse(profileText)
+          const json = JSON.parse(await profileRes.text())
           if (json.success) setConfig(json.data)
         } catch {
-          console.error('[Client Error] Dữ liệu profile không phải JSON hợp lệ')
+          console.error('[Client] Dữ liệu profile không hợp lệ')
         }
 
         try {
-          const botsJson = await botsRes.json()
-          if (botsJson.success) setBotCount(botsJson.data.length)
+          const bJson = await botsRes.json()
+          if (bJson.success) setBotCount(bJson.data.length)
         } catch {}
-      } catch (error) {
-        console.error('[Client Fatal] Lỗi kết nối toàn cục:', error)
+      } catch (err) {
+        console.error('[Client] Lỗi kết nối:', err)
       } finally {
         setMounted(true)
       }
     }
-    initProfile()
+    init()
   }, [])
+
+  /* Apply theme CSS vars whenever config changes */
+  useEffect(() => {
+    if (!config?.theme) return
+    const root = document.documentElement
+    const t = config.theme
+    if (t.primaryColor) root.style.setProperty('--theme-primary', t.primaryColor)
+    if (t.accentColor) root.style.setProperty('--theme-accent', t.accentColor)
+  }, [config])
 
   if (!mounted) return null
 
   if (!config) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a15] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a15]">
         <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
-  const status = config.profile.status as string
+  const { profile, theme, effects, social } = config
+  const status = profile?.status as string
   const statusLabel = STATUS_LABELS[status] ?? STATUS_LABELS.online
   const statusDot = STATUS_COLORS[status] ?? STATUS_COLORS.online
 
+  const enableParticles = effects?.enableParticles !== false
+  const enableMusicPlayer = effects?.enableMusicPlayer !== false
+  const enableViewCounter = effects?.enableViewCounter !== false
+  const particleCount = Math.min(theme?.particleCount ?? 35, 60)
+
+  const hasMusicPlayer = enableMusicPlayer && !!profile?.music
+
   return (
     <main className="relative min-h-screen overflow-hidden">
-      {/* Background layers */}
-      <AuroraBackground />
-      <ParticleBackground />
+      {/* Dynamic background — aurora / image / video */}
+      <DynamicBackground
+        bgUrl={profile?.background}
+        avatarUrl={profile?.avatar}
+        useAvatarAsBg={theme?.useAvatarAsBackground ?? false}
+        primaryColor={theme?.primaryColor}
+        accentColor={theme?.accentColor}
+      />
+
+      {/* Particles */}
+      {enableParticles && <ParticleBackground count={particleCount} />}
 
       {/* View counter */}
-      <ViewCounter count={config.profile.viewCount} trend={15} />
+      {enableViewCounter && (
+        <ViewCounter count={profile?.viewCount} trend={15} />
+      )}
 
       {/* Main content */}
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-20">
-        {/* Floating decorative elements */}
+      <div className={`relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-16 ${hasMusicPlayer ? 'pb-24' : 'pb-16'}`}>
+
+        {/* Floating decorative dots */}
         <motion.div
-          className="absolute top-1/4 left-10 w-2 h-2 rounded-full bg-[#8b5cf6]"
+          className="absolute top-1/4 left-10 w-1.5 h-1.5 rounded-full bg-[var(--theme-primary,#8b5cf6)]"
           style={{ willChange: 'transform, opacity' }}
-          animate={{ y: [0, -20, 0], opacity: [0.3, 0.8, 0.3] }}
+          animate={{ y: [0, -18, 0], opacity: [0.3, 0.7, 0.3] }}
           transition={{ duration: 4, repeat: Infinity }}
         />
         <motion.div
-          className="absolute top-1/3 right-20 w-1.5 h-1.5 rounded-full bg-[#38bdf8]"
+          className="absolute top-1/3 right-16 w-1 h-1 rounded-full bg-[var(--theme-accent,#38bdf8)]"
           style={{ willChange: 'transform, opacity' }}
-          animate={{ y: [0, -15, 0], opacity: [0.4, 0.9, 0.4] }}
+          animate={{ y: [0, -12, 0], opacity: [0.4, 0.85, 0.4] }}
           transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-        />
-        <motion.div
-          className="absolute bottom-1/3 left-20 w-1 h-1 rounded-full bg-[#a78bfa]"
-          style={{ willChange: 'transform, opacity' }}
-          animate={{ y: [0, -10, 0], opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 3.5, repeat: Infinity, delay: 1 }}
         />
 
         {/* Status pill */}
         <motion.div
-          className="mb-8 text-center"
-          initial={{ opacity: 0, y: -30 }}
+          className="mb-5 text-center"
+          initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.7 }}
         >
-          <motion.div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs text-muted-foreground"
-            animate={{
-              boxShadow: [
-                '0 0 20px rgba(139, 92, 246, 0.1)',
-                '0 0 30px rgba(139, 92, 246, 0.2)',
-                '0 0 20px rgba(139, 92, 246, 0.1)',
-              ],
-            }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs text-muted-foreground">
             <span className={`w-2 h-2 rounded-full animate-pulse ${statusDot}`} />
             <span>{statusLabel}</span>
-          </motion.div>
+          </div>
         </motion.div>
 
         {/* Profile Card */}
         <ProfileCard
-          username={config.profile.username}
-          displayName={config.profile.displayName}
-          description={config.profile.bio}
-          mood={config.profile.quote}
-          location={config.profile.location}
-          viewCount={config.profile.viewCount}
-          status={config.profile.status as 'online' | 'idle' | 'dnd' | 'offline'}
-          social={config.social}
+          username={profile?.username ?? ''}
+          displayName={profile?.displayName ?? ''}
+          description={profile?.bio ?? ''}
+          mood={profile?.quote}
+          location={profile?.location}
+          viewCount={profile?.viewCount}
+          avatarUrl={profile?.avatar}
+          status={status as 'online' | 'idle' | 'dnd' | 'offline'}
+          social={social}
         />
 
         {/* Action buttons */}
-        <div className="mt-10">
+        <div className="mt-7 w-full">
           <ActionButtons botInvite={config.botInvite} />
         </div>
 
-        {/* Quote */}
-        {config.profile.quote && (
-          <motion.p
-            className="mt-12 text-center text-muted-foreground/60 text-sm italic max-w-md"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
-          >
-            {'"'}{config.profile.quote}{'"'}
-          </motion.p>
-        )}
-
-        {/* Bot preview link */}
+        {/* Bot preview */}
         {botCount > 0 && (
           <motion.div
-            className="mt-8"
-            initial={{ opacity: 0, y: 10 }}
+            className="mt-5"
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.8 }}
+            transition={{ delay: 1.6 }}
           >
             <Link
               href="/bots"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass border border-[#8b5cf6]/20 text-sm text-muted-foreground hover:text-white hover:border-[#8b5cf6]/50 transition-all group"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-[var(--theme-primary,#8b5cf6)]/20 text-xs text-muted-foreground hover:text-white hover:border-[var(--theme-primary,#8b5cf6)]/50 transition-all group"
             >
-              <Bot className="w-4 h-4 text-[#8b5cf6]" />
+              <Bot className="w-3.5 h-3.5 text-[var(--theme-primary,#8b5cf6)]" />
               <span>{botCount} Discord Bot</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
             </Link>
           </motion.div>
         )}
       </div>
 
-      {/* Music Player */}
-      <MusicPlayer src={config.profile.music} />
+      {/* Music player — only if music URL and feature enabled */}
+      {hasMusicPlayer && (
+        <MusicPlayer
+          src={profile.music}
+          title={profile.musicTitle || undefined}
+          artist={profile.musicArtist || undefined}
+        />
+      )}
 
-      {/* Cursor glow effect */}
-      <div className="pointer-events-none fixed inset-0 z-30 transition-all duration-300" id="cursor-glow" />
-
-      {/* Hidden Admin Login Button */}
+      {/* Hidden admin login */}
       <Link
         href="/login"
-        className="fixed bottom-6 right-6 z-50 p-3 rounded-full glass-strong border border-border text-muted-foreground hover:text-white hover:shadow-[0_0_15px_rgba(139,92,246,0.5)] transition-all group"
+        className="fixed bottom-5 right-5 z-50 p-2.5 rounded-full glass-strong border border-border text-muted-foreground hover:text-white hover:shadow-[0_0_15px_rgba(139,92,246,0.4)] transition-all group"
         title="Cổng Admin"
       >
-        <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
+        <Lock className="w-4 h-4 group-hover:scale-110 transition-transform" />
       </Link>
     </main>
   )
