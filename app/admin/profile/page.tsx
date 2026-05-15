@@ -44,12 +44,12 @@ export default function AdminProfilePage() {
         <div className="flex items-center gap-2">
           <button onClick={resetToSaved}
             className="px-4 py-2.5 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" /> Discard
+            <RotateCcw className="w-4 h-4" /> Huỷ thay đổi
           </button>
           <button onClick={() => handleSave()} disabled={isSaving}
             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#8b5cf6] to-[#38bdf8] text-white font-medium hover:shadow-lg hover:shadow-[#8b5cf6]/30 transition-all flex items-center gap-2 disabled:opacity-50 text-sm">
             {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-            Save to MongoDB
+            Lưu
           </button>
         </div>
       </motion.div>
@@ -60,7 +60,7 @@ export default function AdminProfilePage() {
           {/* Basic Info */}
           <motion.div className="glass rounded-2xl p-6"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <h2 className="text-base font-semibold text-foreground mb-5">Basic Info</h2>
+            <h2 className="text-base font-semibold text-foreground mb-5">Thông tin cơ bản</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className={lbl}>Display Name</label>
@@ -94,7 +94,7 @@ export default function AdminProfilePage() {
           {/* Media URLs */}
           <motion.div className="glass rounded-2xl p-6"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h2 className="text-base font-semibold text-foreground mb-5">Media URLs</h2>
+            <h2 className="text-base font-semibold text-foreground mb-5">URL Media</h2>
             <div className="space-y-4">
               {[
                 { label: 'Avatar URL', key: 'profile.avatar', placeholder: 'https://cdn.example.com/avatar.png' },
@@ -122,7 +122,7 @@ export default function AdminProfilePage() {
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
           <div className="glass rounded-2xl p-5 sticky top-6">
             <h3 className="text-sm font-semibold text-muted-foreground mb-4 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" /> Live Preview
+              <Sparkles className="w-4 h-4" /> Xem trước
             </h3>
             {/* Mini profile card */}
             <div className="relative">

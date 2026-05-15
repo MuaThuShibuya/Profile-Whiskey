@@ -92,8 +92,8 @@ export default function AdminRequestsPage() {
             <MessageSquare className="w-5 h-5 text-[#38bdf8]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-[#a78bfa] to-[#38bdf8] bg-clip-text text-transparent">Media Requests</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">{requests.length} requests · {counts.pending} pending</p>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-[#a78bfa] to-[#38bdf8] bg-clip-text text-transparent">Yêu cầu Media</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">{requests.length} yêu cầu · {counts.pending} chờ duyệt</p>
           </div>
         </div>
         <button onClick={fetchRequests}
@@ -108,10 +108,11 @@ export default function AdminRequestsPage() {
         <div className="flex gap-1.5 p-1 glass rounded-xl flex-wrap">
           {(['all','pending','approved','rejected'] as Status[]).map(s => (
             <button key={s} onClick={() => setFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 filter === s ? 'bg-gradient-to-r from-[#8b5cf6] to-[#38bdf8] text-white' : 'text-muted-foreground hover:text-foreground'
               }`}>
-              {s} {counts[s] > 0 && <span className="ml-1 opacity-70">({counts[s]})</span>}
+              {s === 'all' ? 'Tất cả' : s === 'pending' ? 'Chờ duyệt' : s === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+              {counts[s] > 0 && <span className="ml-1 opacity-70">({counts[s]})</span>}
             </button>
           ))}
         </div>

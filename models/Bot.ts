@@ -24,7 +24,6 @@ const BotSchema = new mongoose.Schema({
   sortOrder: { type: Number, default: 0 },
 }, { timestamps: true })
 
-BotSchema.index({ slug: 1 })
 BotSchema.index({ isPublic: 1, status: 1, sortOrder: 1 })
 
 export default mongoose.models.Bot || mongoose.model('Bot', BotSchema)

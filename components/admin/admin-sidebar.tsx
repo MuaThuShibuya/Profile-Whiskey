@@ -18,15 +18,13 @@ import {
   X,
   Shield,
   Bot,
-  Cpu,
 } from 'lucide-react'
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Tổng quan',    href: '/admin' },
   { icon: User,           label: 'Profile',        href: '/admin/profile' },
   { icon: ImageIcon,      label: 'Media nhận',     href: '/admin/media' },
-  { icon: Bot,            label: 'Cài đặt Bot',    href: '/admin/bot' },
-  { icon: Cpu,            label: 'Quản lý Bot',    href: '/admin/bots' },
+  { icon: Bot,            label: 'Quản lý Bot',    href: '/admin/bots' },
   { icon: Music,          label: 'Âm nhạc',        href: '/admin/music' },
   { icon: Palette,        label: 'Giao diện',      href: '/admin/theme' },
   { icon: Link2,          label: 'Mạng xã hội',    href: '/admin/links' },

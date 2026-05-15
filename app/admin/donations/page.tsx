@@ -50,12 +50,12 @@ export default function AdminDonationsPage() {
         <div className="flex items-center gap-2">
           <button onClick={resetToSaved}
             className="px-4 py-2.5 rounded-xl bg-secondary text-foreground text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center gap-2">
-            <RotateCcw className="w-4 h-4" /> Discard
+            <RotateCcw className="w-4 h-4" /> Huỷ thay đổi
           </button>
           <button onClick={() => handleSave()} disabled={isSaving}
             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#ef4444] to-[#f87171] text-white font-medium hover:shadow-lg hover:shadow-[#ef4444]/30 transition-all flex items-center gap-2 disabled:opacity-50 text-sm">
             {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-            Save to MongoDB
+            Lưu
           </button>
         </div>
       </motion.div>
@@ -64,7 +64,7 @@ export default function AdminDonationsPage() {
         {/* Form */}
         <motion.div className="glass rounded-2xl p-6 space-y-4"
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <h2 className="text-base font-semibold text-foreground">Bank Info</h2>
+          <h2 className="text-base font-semibold text-foreground">Thông tin ngân hàng</h2>
           {[
             { label: 'Tên ngân hàng', key: 'bank.bankName', placeholder: 'Vietcombank' },
             { label: 'Số tài khoản', key: 'bank.accountNumber', placeholder: '1234567890', mono: true },
@@ -97,7 +97,7 @@ export default function AdminDonationsPage() {
         <motion.div className="space-y-4"
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
           <div className="glass rounded-2xl p-6 sticky top-6">
-            <h2 className="text-base font-semibold text-foreground mb-4">Preview</h2>
+            <h2 className="text-base font-semibold text-foreground mb-4">Xem trước</h2>
 
             {/* Bank card preview */}
             <div className="relative">
